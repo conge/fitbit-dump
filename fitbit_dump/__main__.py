@@ -280,18 +280,25 @@ async def fetch_activity_tcx(activity, auth=None, activity_directory=pathlib.Pat
   assert auth is not None
   if not activity.get('tcxLink'):
     logging.debug(f"No tcxLink for {activity}. Skipping")
-    return
+    return 0
   outfile = activity_directory / f"{activity['logId']}.tcx"
   if outfile.exists():
     logging.debug(f"{activity} tcx already downloaded. Skipping")
-    return
+    return 0
   logging.info(f"Fetching activity tcx for {activity}...")
   await asyncio.sleep(0.5)
   async with aiohttp.ClientSession() as session:
     async with session.get(activity['tcxLink'], headers={'Authorization': f"Bearer {auth}"}) as req:
       with outfile.open('wb') as fw:
         async for chunk in req.content.iter_chunked(CHUNK_SIZE):
-          fw.write(chunk)
+          if chunk == 'Too Many Requests': # checking if reached API limits
+            logging.debug(f"reached maximum hourly API requests. waiting")
+            await asyncio.sleep(3610)
+            await fetch_activity_tcx(activity, auth, activity_directory)
+            return
+          else:
+            fw.write(chunk)
+  return 1
 
 # CLI
 
@@ -375,6 +382,7 @@ async def dump_00_activity_log_list(activity_log_file: pathlib.Path=None, **kwar
 async def dump_01_activity_tcx(activity_log_file: pathlib.Path=None, activity_directory: pathlib.Path=None, **kwargs):
   authorization = await oauth2_flow(**kwargs)
   activity_directory.mkdir(parents=True, exist_ok=True)
+  api_request_counter = 0
   with activity_log_file.open('r') as fr:
     for activity in map(json.loads, fr):
       await fetch_activity_tcx(activity, auth=authorization['access_token'], activity_directory=activity_directory)
