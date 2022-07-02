@@ -10,7 +10,6 @@ setup(
   long_description=open('README.md', 'r').read(),
   install_requires=list(map(str.strip, open('requirements.txt', 'r').readlines())),
   packages=find_packages(),
-  package_data={"fitbit_dump": ["VERSION"]},
   entry_points={
     'console_scripts': ['fitbit-dump=fitbit_dump.__main__:cli'],
   }
