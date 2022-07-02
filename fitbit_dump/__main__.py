@@ -36,8 +36,8 @@ def click_option(*args, envvar=None, default=None, **kwargs):
   def decorator(func):
     @click.option(*args, envvar=envvar, default=default or default_env.get(envvar), **kwargs)
     @functools.wraps(func)
-    def wrapper(*func):
-      return func(**kwargs)
+    def wrapper(**func_kwargs):
+      return func(**func_kwargs)
     return wrapper
   return decorator
 
@@ -226,7 +226,6 @@ async def oauth2_refresh(
       return auth
 
 async def oauth2_flow(**kwargs):
-  #envfile = dotenv.find_dotenv()
   envfile = pathlib.Path('.env')
   auth = dotenv.dotenv_values(envfile).get('FITBIT_AUTHORIZATION')
   if auth is None:
